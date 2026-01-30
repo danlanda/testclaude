@@ -1,0 +1,69 @@
+// Prisma schema for Travel Planner
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  name          String?
+  picture       String?
+  googleId      String   @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  places        Place[]
+  trips         Trip[]
+}
+
+model Trip {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  places      Place[]
+
+  @@index([userId])
+}
+
+model Place {
+  id            String   @id @default(uuid())
+  name          String
+  description   String?
+  category      String   // accommodation, activities, food, transportation
+  location      String?
+  latitude      Float?
+  longitude     Float?
+  bookingLink   String?
+  mapsLink      String?
+  sourceUrl     String?
+  sourceTitle   String?
+  notes         String?
+  rating        Int?     // 1-5 user rating
+  visited       Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tripId        String?
+  trip          Trip?    @relation(fields: [tripId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([tripId])
+  @@index([category])
+  @@index([location])
+}

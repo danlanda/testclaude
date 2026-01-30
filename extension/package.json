@@ -1,0 +1,11 @@
+{
+  "name": "travel-planner-extension",
+  "version": "1.0.0",
+  "description": "Chrome Extension for Travel Planning",
+  "scripts": {
+    "build": "node build.js"
+  },
+  "devDependencies": {
+    "esbuild": "^0.20.1"
+  }
+}

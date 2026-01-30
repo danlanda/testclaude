@@ -4,23 +4,76 @@ This document provides context and guidelines for AI assistants working with thi
 
 ## Repository Overview
 
+**Project**: Travel Planner Chrome Extension
 **Repository**: testclaude
-**Status**: New/Empty repository (initialized January 2026)
-**Primary Language**: To be determined
+**Primary Languages**: TypeScript (Backend), JavaScript (Extension)
+**Framework**: Express.js, Chrome Extension Manifest V3
+**Database**: SQLite with Prisma ORM
 
-This repository is newly initialized and awaiting its first implementation. This CLAUDE.md file serves as the foundational documentation for AI assistants.
+A Chrome extension that extracts and organizes travel recommendations from any webpage, with a Node.js backend for data persistence and user authentication.
 
 ## Project Structure
 
 ```
-testclaude/
-├── CLAUDE.md          # AI assistant guidelines (this file)
-└── .git/              # Git version control
+travel-planner/
+├── CLAUDE.md                 # AI assistant guidelines (this file)
+├── README.md                 # Project documentation
+├── package.json              # Monorepo root configuration
+├── .gitignore                # Git ignore rules
+│
+├── extension/                # Chrome Extension (Manifest V3)
+│   ├── manifest.json         # Extension configuration
+│   ├── build.js              # Build script
+│   ├── popup/                # Extension popup UI
+│   │   ├── popup.html        # Main popup HTML
+│   │   ├── popup.css         # Popup styles
+│   │   └── popup.js          # Popup logic & state management
+│   ├── content/              # Content script
+│   │   └── content.js        # Page scanning & place extraction
+│   ├── background/           # Service worker
+│   │   └── background.js     # Auth, API calls, message handling
+│   ├── styles/               # Injected styles
+│   │   └── content.css       # Floating button & toast styles
+│   └── icons/                # Extension icons (16, 48, 128px)
+│
+└── backend/                  # Node.js API Server
+    ├── package.json          # Backend dependencies
+    ├── tsconfig.json         # TypeScript configuration
+    ├── .env.example          # Environment template
+    ├── prisma/
+    │   └── schema.prisma     # Database schema (User, Place, Trip)
+    └── src/
+        ├── index.ts          # Express server entry point
+        ├── config/
+        │   └── database.ts   # Prisma client singleton
+        ├── routes/
+        │   ├── auth.ts       # Google OAuth & JWT endpoints
+        │   ├── places.ts     # CRUD for places
+        │   └── trips.ts      # Trip management
+        └── middleware/
+            ├── auth.ts       # JWT authentication middleware
+            └── errorHandler.ts # Global error handling
 ```
 
-*As the project grows, update this structure to reflect new directories and key files.*
-
 ## Development Workflow
+
+### Quick Start
+
+```bash
+# Install all dependencies
+npm install
+
+# Backend setup
+cd backend
+cp .env.example .env
+# Edit .env with your credentials
+npm run db:generate
+npm run db:push
+npm run dev
+
+# Load extension in Chrome
+# chrome://extensions > Developer mode > Load unpacked > select extension/
+```
 
 ### Branch Strategy
 
@@ -30,112 +83,231 @@ testclaude/
 
 ### Commit Guidelines
 
-1. Write clear, descriptive commit messages
-2. Use conventional commit format when applicable:
+1. Use conventional commit format:
    - `feat:` for new features
    - `fix:` for bug fixes
    - `docs:` for documentation changes
    - `refactor:` for code refactoring
    - `test:` for adding/modifying tests
-3. Keep commits atomic and focused on single changes
+2. Keep commits atomic and focused on single changes
+3. Write clear messages explaining the "why"
 
-### Code Style
+## Code Conventions
 
-*Define language-specific style guides as the project develops:*
+### TypeScript (Backend)
 
-- Linting rules: TBD
-- Formatting: TBD
-- Testing framework: TBD
+- Use ES modules (`import`/`export`)
+- Async/await for asynchronous code
+- Zod for request validation
+- Prisma for database operations
+- Express middleware pattern for auth and error handling
+
+### JavaScript (Extension)
+
+- Chrome Extension Manifest V3 APIs
+- Message passing between content script, background, and popup
+- Chrome Storage API for local persistence
+- Chrome Identity API for OAuth
+
+### API Design
+
+- RESTful endpoints under `/api/`
+- JWT Bearer authentication
+- Consistent error response format: `{ error: { message, code } }`
+- Validation errors return 400 status
 
 ## AI Assistant Instructions
 
 ### When Working on This Repository
 
 1. **Read before modifying**: Always read existing files before making changes
-2. **Prefer edits over new files**: Modify existing code rather than creating new files when possible
+2. **Follow existing patterns**: Match the code style and patterns already established
 3. **Keep changes minimal**: Only make changes directly related to the task
-4. **Avoid over-engineering**: Implement the simplest solution that meets requirements
-5. **Security first**: Never introduce vulnerabilities (XSS, SQL injection, etc.)
+4. **Security first**: Never introduce vulnerabilities (XSS, SQL injection, etc.)
+5. **Update CLAUDE.md**: When adding significant features, update this file
+
+### Key Patterns to Follow
+
+**Backend Route Pattern**:
+```typescript
+router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const data = schema.parse(req.body);
+    const result = await prisma.model.create({ data: { ...data, userId: req.userId! } });
+    res.status(201).json(result);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return next(createError('Invalid data', 400, 'VALIDATION_ERROR'));
+    }
+    next(error);
+  }
+});
+```
+
+**Extension Message Pattern**:
+```javascript
+// Sending message
+const response = await chrome.runtime.sendMessage({ action: 'actionName', data });
+
+// Receiving in background.js
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  handleMessage(request, sender).then(sendResponse);
+  return true; // Keep channel open for async
+});
+```
 
 ### Before Making Changes
 
-- Understand the existing codebase structure
-- Check for existing patterns and conventions
-- Review related tests if they exist
-- Verify dependencies are properly managed
+- Understand the data flow: Content Script → Background → API → Database
+- Check Prisma schema for data relationships
+- Review existing routes for similar patterns
+- Test OAuth flow requires real Google credentials
 
 ### After Making Changes
 
-- Ensure all tests pass (when tests exist)
-- Verify no lint errors are introduced
-- Confirm the build succeeds (when applicable)
-- Write clear commit messages explaining the "why"
+- Run TypeScript build: `npm run build` (backend)
+- Reload extension in chrome://extensions
+- Test API endpoints with curl or Postman
+- Verify database changes with Prisma Studio: `npx prisma studio`
 
 ## Testing
 
-*Testing strategy to be defined as the project develops.*
-
 ```bash
-# Placeholder for test commands
-# npm test
-# pytest
-# go test ./...
+# Backend type checking
+cd backend && npm run build
+
+# Database inspection
+cd backend && npx prisma studio
+
+# API health check
+curl http://localhost:3000/health
 ```
 
 ## Build & Deployment
 
-*Build and deployment processes to be defined.*
+### Backend
 
 ```bash
-# Placeholder for build commands
-# npm run build
-# make build
+cd backend
+npm run build        # Compile TypeScript
+npm run start        # Run production build
+npm run db:migrate   # Run migrations (production)
 ```
 
-## Dependencies
+### Extension
 
-*List key dependencies as they are added to the project.*
+```bash
+cd extension
+npm run build        # Copy files to dist/
+# Load dist/ folder in Chrome for testing
+# Package as .crx for distribution
+```
 
-## Environment Setup
+## Key Dependencies
 
-*Document environment setup steps as the project develops:*
+### Backend
+| Package | Purpose |
+|---------|---------|
+| express | Web framework |
+| @prisma/client | Database ORM |
+| jsonwebtoken | JWT authentication |
+| google-auth-library | Google OAuth verification |
+| zod | Request validation |
+| cors | Cross-origin requests |
 
-1. Clone the repository
-2. Install dependencies
-3. Configure environment variables
-4. Run development server
+### Extension
+| API | Purpose |
+|-----|---------|
+| chrome.storage | Local data persistence |
+| chrome.identity | Google OAuth |
+| chrome.tabs | Active tab queries |
+| chrome.runtime | Message passing |
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| DATABASE_URL | Yes | SQLite file path |
+| JWT_SECRET | Yes | Secret for signing JWTs |
+| GOOGLE_CLIENT_ID | Yes | From Google Cloud Console |
+| PORT | No | Server port (default: 3000) |
+| CORS_ORIGIN | No | Chrome extension origin |
 
 ## Key Files Reference
 
 | File | Purpose |
 |------|---------|
-| `CLAUDE.md` | AI assistant guidelines and project documentation |
-
-*Add entries as significant files are created.*
+| `backend/prisma/schema.prisma` | Database schema - User, Place, Trip models |
+| `backend/src/routes/places.ts` | Core CRUD operations for places |
+| `backend/src/middleware/auth.ts` | JWT verification and user context |
+| `extension/content/content.js` | Page scanning and place extraction logic |
+| `extension/background/background.js` | Service worker - API calls, auth handling |
+| `extension/popup/popup.js` | UI state management and rendering |
 
 ## Common Tasks
 
-### Adding a New Feature
+### Adding a New API Endpoint
 
-1. Create a feature branch from main
-2. Implement the feature with tests
-3. Update documentation if needed
-4. Submit a pull request
+1. Define Zod schema for request validation
+2. Add route handler in appropriate routes file
+3. Use `authenticate` middleware if auth required
+4. Follow existing error handling pattern
+5. Update CLAUDE.md Key Files if significant
 
-### Fixing a Bug
+### Modifying Place Extraction
 
-1. Reproduce the issue
-2. Write a failing test (when applicable)
-3. Implement the fix
-4. Verify the fix and tests pass
-5. Submit a pull request
+1. Edit `extension/content/content.js`
+2. Update `CATEGORY_PATTERNS` for new keywords
+3. Modify `extractPlaceFromLink()` or `extractPlaceFromHeading()`
+4. Test on various travel blogs/sites
+
+### Adding a New Place Category
+
+1. Update `CATEGORY_PATTERNS` in content.js
+2. Update Zod enum in `backend/src/routes/places.ts`
+3. Add category styling in `extension/popup/popup.css`
+4. Update `formatCategory()` in popup.js
+
+### Debugging Chrome Extension
+
+1. Open chrome://extensions
+2. Click "Inspect views: service worker" for background logs
+3. Right-click extension popup > Inspect for popup logs
+4. Open DevTools on webpage for content script logs
+
+## Architecture Notes
+
+### Data Flow
+```
+[Web Page] → Content Script (extracts places)
+     ↓
+Background Script (API calls, auth)
+     ↓
+Backend API (validation, business logic)
+     ↓
+SQLite Database (Prisma)
+```
+
+### Authentication Flow
+```
+1. User clicks "Sign In" in popup
+2. popup.js sends 'signIn' message to background.js
+3. background.js calls chrome.identity.getAuthToken()
+4. Google OAuth flow completes, returns access token
+5. background.js sends token to POST /api/auth/google
+6. Backend verifies with Google, creates/updates user
+7. Backend returns JWT token
+8. Extension stores JWT in chrome.storage.local
+9. Subsequent API calls include JWT in Authorization header
+```
 
 ## Notes for AI Assistants
 
-- This is a new repository - help establish good patterns from the start
-- When adding new technologies, update this CLAUDE.md file accordingly
-- Document any architectural decisions made
-- Keep this file updated as the project evolves
+- This is a functional Chrome extension with backend - maintain working state
+- Place extraction uses heuristics - improvements may need real-world testing
+- Google OAuth requires actual credentials to test fully
+- Extension ID changes when loaded unpacked - affects CORS settings
+- SQLite used for simplicity - consider PostgreSQL for production
 
 ---
 
