@@ -238,11 +238,28 @@ async function handleScanPage() {
   // Get the active tab
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
+  // Check if we can scan this page
+  if (!tab.url || tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) {
+    alert('Cannot scan this page. Please navigate to a regular website.');
+    resetScanButton();
+    return;
+  }
+
+  try {
+    // First, try to inject the content script (in case it wasn't loaded)
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      files: ['content/content.js']
+    });
+  } catch (injectionError) {
+    console.log('Script already injected or injection failed:', injectionError);
+  }
+
   // Send message to content script to scan the page
   try {
     const response = await chrome.tabs.sendMessage(tab.id, { action: 'scanPage' });
 
-    if (response.places && response.places.length > 0) {
+    if (response && response.places && response.places.length > 0) {
       // Send extracted places to background script
       await chrome.runtime.sendMessage({
         action: 'extractPlaces',
@@ -258,13 +275,17 @@ async function handleScanPage() {
 
       alert(`Found ${response.places.length} places!`);
     } else {
-      alert('No places found on this page.');
+      alert('No places found on this page. Try a travel blog or guide.');
     }
   } catch (error) {
     console.error('Scan error:', error);
-    alert('Could not scan this page. Try refreshing and try again.');
+    alert('Could not scan this page. Please refresh the page and try again.');
   }
 
+  resetScanButton();
+}
+
+function resetScanButton() {
   scanPageBtn.disabled = false;
   scanPageBtn.innerHTML = `
     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
