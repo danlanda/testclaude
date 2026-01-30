@@ -246,25 +246,20 @@ async function handleScanPage() {
   }
 
   try {
-    // First, try to inject the content script (in case it wasn't loaded)
-    await chrome.scripting.executeScript({
+    // Execute scanning function directly in the page
+    const results = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
-      files: ['content/content.js']
+      func: scanPageForPlaces
     });
-  } catch (injectionError) {
-    console.log('Script already injected or injection failed:', injectionError);
-  }
 
-  // Send message to content script to scan the page
-  try {
-    const response = await chrome.tabs.sendMessage(tab.id, { action: 'scanPage' });
+    const places = results[0]?.result || [];
 
-    if (response && response.places && response.places.length > 0) {
+    if (places.length > 0) {
       // Send extracted places to background script
       await chrome.runtime.sendMessage({
         action: 'extractPlaces',
         data: {
-          places: response.places,
+          places: places,
           pageUrl: tab.url,
           pageTitle: tab.title
         }
@@ -273,16 +268,102 @@ async function handleScanPage() {
       // Reload places
       await loadPlaces();
 
-      alert(`Found ${response.places.length} places!`);
+      alert(`Found ${places.length} places!`);
     } else {
       alert('No places found on this page. Try a travel blog or guide.');
     }
   } catch (error) {
     console.error('Scan error:', error);
-    alert('Could not scan this page. Please refresh the page and try again.');
+    alert('Could not scan this page: ' + error.message);
   }
 
   resetScanButton();
+}
+
+// This function runs in the context of the webpage
+function scanPageForPlaces() {
+  const CATEGORY_PATTERNS = {
+    accommodation: {
+      keywords: ['hotel', 'hostel', 'airbnb', 'resort', 'motel', 'inn', 'lodge', 'guesthouse', 'b&b', 'stay', 'accommodation', 'booking', 'villa'],
+      domains: ['booking.com', 'airbnb.com', 'hotels.com', 'expedia.com', 'agoda.com']
+    },
+    activities: {
+      keywords: ['tour', 'museum', 'park', 'beach', 'hiking', 'adventure', 'attraction', 'landmark', 'temple', 'church', 'castle', 'monument', 'gallery', 'visit', 'explore'],
+      domains: ['viator.com', 'getyourguide.com', 'tripadvisor.com']
+    },
+    food: {
+      keywords: ['restaurant', 'cafe', 'bar', 'food', 'dining', 'eat', 'cuisine', 'bistro', 'brunch', 'dinner', 'lunch'],
+      domains: ['opentable.com', 'yelp.com']
+    },
+    transportation: {
+      keywords: ['airport', 'train', 'bus', 'ferry', 'car rental', 'taxi', 'transfer', 'flight'],
+      domains: ['skyscanner.com', 'kayak.com', 'rome2rio.com']
+    }
+  };
+
+  function detectCategory(text) {
+    const lower = text.toLowerCase();
+    for (const [cat, patterns] of Object.entries(CATEGORY_PATTERNS)) {
+      if (patterns.keywords.some(kw => lower.includes(kw))) return cat;
+    }
+    return null;
+  }
+
+  function getDomainCategory(url) {
+    try {
+      const host = new URL(url).hostname;
+      for (const [cat, patterns] of Object.entries(CATEGORY_PATTERNS)) {
+        if (patterns.domains.some(d => host.includes(d))) return cat;
+      }
+    } catch {}
+    return null;
+  }
+
+  const places = [];
+  const seen = new Set();
+
+  // Scan links
+  document.querySelectorAll('a[href]').forEach(link => {
+    const text = link.innerText.trim();
+    if (!text || text.length < 3 || text.length > 100) return;
+
+    const category = getDomainCategory(link.href) || detectCategory(text);
+    if (!category) return;
+
+    const name = text.replace(/^[0-9]+\.?\s*/, '').trim();
+    if (seen.has(name.toLowerCase())) return;
+    seen.add(name.toLowerCase());
+
+    places.push({
+      name,
+      description: link.title || '',
+      category,
+      bookingLink: link.href,
+      mapsLink: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}`
+    });
+  });
+
+  // Scan headings
+  document.querySelectorAll('h1, h2, h3, h4').forEach(h => {
+    const text = h.innerText.trim();
+    if (!text || text.length < 3 || text.length > 100) return;
+
+    const category = detectCategory(text);
+    if (!category) return;
+
+    const name = text.replace(/^[0-9]+\.?\s*/, '').replace(/[-–—].*$/, '').trim();
+    if (seen.has(name.toLowerCase())) return;
+    seen.add(name.toLowerCase());
+
+    places.push({
+      name,
+      description: '',
+      category,
+      mapsLink: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}`
+    });
+  });
+
+  return places;
 }
 
 function resetScanButton() {
