@@ -2,14 +2,26 @@
   "manifest_version": 3,
   "name": "Page Summary",
   "version": "1.0.0",
-  "description": "Get a quick summary of any webpage",
+  "description": "Get quick summaries of any webpage and save them to your dashboard",
   "permissions": [
     "activeTab",
-    "scripting"
+    "scripting",
+    "storage",
+    "identity"
   ],
   "host_permissions": [
-    "<all_urls>"
+    "<all_urls>",
+    "https://*.googleapis.com/*",
+    "http://localhost:3000/*"
   ],
+  "oauth2": {
+    "client_id": "815124406983-ou9e9eeh78hataj4p4uq02jqetbcmdsk.apps.googleusercontent.com",
+    "scopes": [
+      "openid",
+      "email",
+      "profile"
+    ]
+  },
   "action": {
     "default_popup": "popup/popup.html",
     "default_icon": {
@@ -22,5 +34,8 @@
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
+  },
+  "background": {
+    "service_worker": "background/background.js"
   }
 }

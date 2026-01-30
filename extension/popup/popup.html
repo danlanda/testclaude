@@ -8,12 +8,27 @@
 </head>
 <body>
   <div class="container">
+    <!-- Header -->
     <header class="header">
       <h1>📄 Page Summary</h1>
+      <div id="authSection" class="auth-section">
+        <button id="signInBtn" class="btn-auth">Sign In</button>
+        <div id="userInfo" class="user-info hidden">
+          <span id="userName"></span>
+          <button id="signOutBtn" class="btn-auth-small">Sign Out</button>
+        </div>
+      </div>
     </header>
 
-    <main class="main-content">
-      <div id="pageInfo" class="page-info">
+    <!-- Tabs -->
+    <nav class="tabs">
+      <button class="tab active" data-tab="summarize">Summarize</button>
+      <button class="tab" data-tab="dashboard">My Summaries</button>
+    </nav>
+
+    <!-- Summarize Tab -->
+    <main id="summarizeTab" class="tab-content active">
+      <div class="page-info">
         <div id="pageTitle" class="page-title">Loading...</div>
         <div id="pageUrl" class="page-url"></div>
       </div>
@@ -22,36 +37,59 @@
         ✨ Summarize This Page
       </button>
 
-      <div id="summarySection" class="summary-section hidden">
-        <h2>Summary</h2>
-        <div id="summaryContent" class="summary-content"></div>
-      </div>
-
-      <div id="statsSection" class="stats-section hidden">
-        <h2>Page Stats</h2>
-        <div class="stats-grid">
-          <div class="stat">
-            <span class="stat-value" id="wordCount">0</span>
-            <span class="stat-label">Words</span>
-          </div>
-          <div class="stat">
-            <span class="stat-value" id="linkCount">0</span>
-            <span class="stat-label">Links</span>
-          </div>
-          <div class="stat">
-            <span class="stat-value" id="imageCount">0</span>
-            <span class="stat-label">Images</span>
-          </div>
-          <div class="stat">
-            <span class="stat-value" id="headingCount">0</span>
-            <span class="stat-label">Headings</span>
+      <div id="resultSection" class="result-section hidden">
+        <div id="statsSection" class="stats-section">
+          <div class="stats-grid">
+            <div class="stat">
+              <span class="stat-value" id="wordCount">0</span>
+              <span class="stat-label">Words</span>
+            </div>
+            <div class="stat">
+              <span class="stat-value" id="linkCount">0</span>
+              <span class="stat-label">Links</span>
+            </div>
+            <div class="stat">
+              <span class="stat-value" id="imageCount">0</span>
+              <span class="stat-label">Images</span>
+            </div>
+            <div class="stat">
+              <span class="stat-value" id="headingCount">0</span>
+              <span class="stat-label">Headings</span>
+            </div>
           </div>
         </div>
+
+        <div class="summary-section">
+          <h3>Summary</h3>
+          <div id="summaryContent" class="summary-content"></div>
+        </div>
+
+        <div id="keyPointsSection" class="key-points-section hidden">
+          <h3>Key Points</h3>
+          <ul id="keyPointsList" class="key-points-list"></ul>
+        </div>
+
+        <button id="saveBtn" class="btn btn-secondary hidden">
+          💾 Save to Dashboard
+        </button>
+        <div id="savedMessage" class="saved-message hidden">✓ Saved!</div>
+      </div>
+    </main>
+
+    <!-- Dashboard Tab -->
+    <main id="dashboardTab" class="tab-content hidden">
+      <div id="loginPrompt" class="login-prompt">
+        <p>Sign in to view your saved summaries</p>
+        <button id="signInBtn2" class="btn btn-primary">Sign In with Google</button>
       </div>
 
-      <div id="keyPointsSection" class="key-points-section hidden">
-        <h2>Key Points</h2>
-        <ul id="keyPointsList" class="key-points-list"></ul>
+      <div id="summariesList" class="summaries-list hidden">
+        <!-- Saved summaries will be rendered here -->
+      </div>
+
+      <div id="emptyDashboard" class="empty-state hidden">
+        <p>No saved summaries yet</p>
+        <p class="hint">Summarize a page and click "Save to Dashboard"</p>
       </div>
     </main>
   </div>

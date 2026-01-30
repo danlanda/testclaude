@@ -1,239 +1,81 @@
-// Background service worker for Travel Planner extension
+// Background service worker for Page Summary extension
 
 const API_BASE_URL = 'http://localhost:3000/api';
 
-// Store for extracted places before user is authenticated
-let pendingPlaces = [];
-
-// Listen for messages from content script and popup
+// Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  handleMessage(request, sender).then(sendResponse);
-  return true; // Keep the message channel open for async response
+  handleMessage(request).then(sendResponse);
+  return true;
 });
 
-async function handleMessage(request, sender) {
+async function handleMessage(request) {
   switch (request.action) {
-    case 'extractPlaces':
-      return handleExtractPlaces(request.data, sender.tab);
-
-    case 'getPlaces':
-      return handleGetPlaces(request.filters);
-
-    case 'savePlace':
-      return handleSavePlace(request.place);
-
-    case 'deletePlace':
-      return handleDeletePlace(request.placeId);
-
-    case 'updatePlace':
-      return handleUpdatePlace(request.placeId, request.updates);
-
     case 'signIn':
       return handleSignIn();
-
     case 'signOut':
       return handleSignOut();
-
     case 'getAuthStatus':
       return handleGetAuthStatus();
-
+    case 'saveSummary':
+      return handleSaveSummary(request.data);
+    case 'getSummaries':
+      return handleGetSummaries();
+    case 'deleteSummary':
+      return handleDeleteSummary(request.id);
     default:
       return { error: 'Unknown action' };
   }
 }
 
-// Extract places from page content
-async function handleExtractPlaces(data, tab) {
-  const { places, pageUrl, pageTitle } = data;
-
-  const authStatus = await handleGetAuthStatus();
-
-  if (!authStatus.isAuthenticated) {
-    // Store places temporarily
-    pendingPlaces = places.map(place => ({
-      ...place,
-      sourceUrl: pageUrl,
-      sourceTitle: pageTitle
-    }));
-    return { success: true, pending: true, count: places.length };
-  }
-
-  // Save places to backend
-  try {
-    const token = await getStoredToken();
-    const savedPlaces = [];
-
-    for (const place of places) {
-      const response = await fetch(`${API_BASE_URL}/places`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          ...place,
-          sourceUrl: pageUrl,
-          sourceTitle: pageTitle
-        })
-      });
-
-      if (response.ok) {
-        savedPlaces.push(await response.json());
-      }
-    }
-
-    return { success: true, places: savedPlaces };
-  } catch (error) {
-    console.error('Error saving places:', error);
-    return { error: error.message };
-  }
-}
-
-// Get places with optional filters
-async function handleGetPlaces(filters = {}) {
-  const authStatus = await handleGetAuthStatus();
-
-  if (!authStatus.isAuthenticated) {
-    return { places: pendingPlaces, pending: true };
-  }
-
-  try {
-    const token = await getStoredToken();
-    const queryParams = new URLSearchParams();
-
-    if (filters.category) queryParams.set('category', filters.category);
-    if (filters.location) queryParams.set('location', filters.location);
-
-    const response = await fetch(`${API_BASE_URL}/places?${queryParams}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch places');
-    }
-
-    const places = await response.json();
-    return { places };
-  } catch (error) {
-    console.error('Error fetching places:', error);
-    return { error: error.message };
-  }
-}
-
-// Save a single place
-async function handleSavePlace(place) {
-  const authStatus = await handleGetAuthStatus();
-
-  if (!authStatus.isAuthenticated) {
-    pendingPlaces.push(place);
-    return { success: true, pending: true };
-  }
-
-  try {
-    const token = await getStoredToken();
-    const response = await fetch(`${API_BASE_URL}/places`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(place)
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to save place');
-    }
-
-    return { success: true, place: await response.json() };
-  } catch (error) {
-    console.error('Error saving place:', error);
-    return { error: error.message };
-  }
-}
-
-// Delete a place
-async function handleDeletePlace(placeId) {
-  try {
-    const token = await getStoredToken();
-    const response = await fetch(`${API_BASE_URL}/places/${placeId}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to delete place');
-    }
-
-    return { success: true };
-  } catch (error) {
-    console.error('Error deleting place:', error);
-    return { error: error.message };
-  }
-}
-
-// Update a place
-async function handleUpdatePlace(placeId, updates) {
-  try {
-    const token = await getStoredToken();
-    const response = await fetch(`${API_BASE_URL}/places/${placeId}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(updates)
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to update place');
-    }
-
-    return { success: true, place: await response.json() };
-  } catch (error) {
-    console.error('Error updating place:', error);
-    return { error: error.message };
-  }
-}
-
-// Handle Google Sign In
+// Auth: Sign In with Google
 async function handleSignIn() {
   try {
-    // Use Chrome Identity API for OAuth
     const authResult = await chrome.identity.getAuthToken({ interactive: true });
 
     if (!authResult.token) {
       throw new Error('No auth token received');
     }
 
-    // Exchange Google token for our backend token
-    const response = await fetch(`${API_BASE_URL}/auth/google`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ googleToken: authResult.token })
+    // Get user info from Google
+    const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { Authorization: `Bearer ${authResult.token}` }
     });
 
-    if (!response.ok) {
-      throw new Error('Backend authentication failed');
+    if (!userInfoResponse.ok) {
+      throw new Error('Failed to get user info');
     }
 
-    const { token, user } = await response.json();
+    const userInfo = await userInfoResponse.json();
 
-    // Store the backend token
-    await chrome.storage.local.set({ authToken: token, user });
+    // Try to authenticate with backend
+    let backendToken = null;
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ googleToken: authResult.token })
+      });
 
-    // Sync any pending places
-    if (pendingPlaces.length > 0) {
-      for (const place of pendingPlaces) {
-        await handleSavePlace(place);
+      if (response.ok) {
+        const data = await response.json();
+        backendToken = data.token;
       }
-      pendingPlaces = [];
+    } catch (e) {
+      console.log('Backend not available, using local storage');
     }
+
+    const user = {
+      id: userInfo.id,
+      email: userInfo.email,
+      name: userInfo.name,
+      picture: userInfo.picture
+    };
+
+    await chrome.storage.local.set({
+      authToken: backendToken,
+      googleToken: authResult.token,
+      user
+    });
 
     return { success: true, user };
   } catch (error) {
@@ -242,18 +84,14 @@ async function handleSignIn() {
   }
 }
 
-// Handle Sign Out
+// Auth: Sign Out
 async function handleSignOut() {
   try {
-    // Clear stored token
-    await chrome.storage.local.remove(['authToken', 'user']);
-
-    // Revoke Chrome identity token
-    const authResult = await chrome.identity.getAuthToken({ interactive: false });
-    if (authResult?.token) {
-      await chrome.identity.removeCachedAuthToken({ token: authResult.token });
+    const data = await chrome.storage.local.get(['googleToken']);
+    if (data.googleToken) {
+      await chrome.identity.removeCachedAuthToken({ token: data.googleToken });
     }
-
+    await chrome.storage.local.remove(['authToken', 'googleToken', 'user', 'summaries']);
     return { success: true };
   } catch (error) {
     console.error('Sign out error:', error);
@@ -261,42 +99,117 @@ async function handleSignOut() {
   }
 }
 
-// Check authentication status
+// Auth: Check Status
 async function handleGetAuthStatus() {
   try {
-    const result = await chrome.storage.local.get(['authToken', 'user']);
-
-    if (result.authToken && result.user) {
-      // Verify token is still valid
-      const response = await fetch(`${API_BASE_URL}/auth/verify`, {
-        headers: {
-          'Authorization': `Bearer ${result.authToken}`
-        }
-      });
-
-      if (response.ok) {
-        return { isAuthenticated: true, user: result.user };
-      }
-
-      // Token invalid, clear storage
-      await chrome.storage.local.remove(['authToken', 'user']);
+    const data = await chrome.storage.local.get(['user', 'authToken']);
+    if (data.user) {
+      return { isAuthenticated: true, user: data.user };
     }
-
     return { isAuthenticated: false };
   } catch (error) {
     return { isAuthenticated: false };
   }
 }
 
-// Get stored auth token
-async function getStoredToken() {
-  const result = await chrome.storage.local.get(['authToken']);
-  return result.authToken;
+// Summary: Save
+async function handleSaveSummary(summaryData) {
+  try {
+    const data = await chrome.storage.local.get(['authToken', 'summaries', 'user']);
+
+    // Try backend first
+    if (data.authToken) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/summaries`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${data.authToken}`
+          },
+          body: JSON.stringify(summaryData)
+        });
+
+        if (response.ok) {
+          return { success: true, summary: await response.json() };
+        }
+      } catch (e) {
+        console.log('Backend not available, saving locally');
+      }
+    }
+
+    // Fallback to local storage
+    const summaries = data.summaries || [];
+    const newSummary = {
+      id: Date.now().toString(),
+      ...summaryData
+    };
+    summaries.unshift(newSummary);
+    await chrome.storage.local.set({ summaries });
+
+    return { success: true, summary: newSummary };
+  } catch (error) {
+    console.error('Save summary error:', error);
+    return { error: error.message };
+  }
 }
 
-// Listen for installation
-chrome.runtime.onInstalled.addListener((details) => {
-  if (details.reason === 'install') {
-    console.log('Travel Planner extension installed');
+// Summary: Get All
+async function handleGetSummaries() {
+  try {
+    const data = await chrome.storage.local.get(['authToken', 'summaries']);
+
+    // Try backend first
+    if (data.authToken) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/summaries`, {
+          headers: { 'Authorization': `Bearer ${data.authToken}` }
+        });
+
+        if (response.ok) {
+          const summaries = await response.json();
+          return { summaries };
+        }
+      } catch (e) {
+        console.log('Backend not available, using local storage');
+      }
+    }
+
+    // Fallback to local storage
+    return { summaries: data.summaries || [] };
+  } catch (error) {
+    console.error('Get summaries error:', error);
+    return { summaries: [] };
   }
-});
+}
+
+// Summary: Delete
+async function handleDeleteSummary(id) {
+  try {
+    const data = await chrome.storage.local.get(['authToken', 'summaries']);
+
+    // Try backend first
+    if (data.authToken) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/summaries/${id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${data.authToken}` }
+        });
+
+        if (response.ok) {
+          return { success: true };
+        }
+      } catch (e) {
+        console.log('Backend not available, deleting locally');
+      }
+    }
+
+    // Fallback to local storage
+    const summaries = (data.summaries || []).filter(s => s.id !== id);
+    await chrome.storage.local.set({ summaries });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Delete summary error:', error);
+    return { error: error.message };
+  }
+}
