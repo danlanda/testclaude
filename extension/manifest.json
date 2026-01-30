@@ -1,28 +1,15 @@
 {
   "manifest_version": 3,
-  "name": "Travel Planner",
+  "name": "Page Summary",
   "version": "1.0.0",
-  "description": "Extract and organize travel recommendations from any webpage",
+  "description": "Get a quick summary of any webpage",
   "permissions": [
-    "storage",
     "activeTab",
-    "identity",
-    "scripting",
-    "tabs"
+    "scripting"
   ],
   "host_permissions": [
-    "<all_urls>",
-    "https://*.googleapis.com/*",
-    "http://localhost:3000/*"
+    "<all_urls>"
   ],
-  "oauth2": {
-    "client_id": "815124406983-ou9e9eeh78hataj4p4uq02jqetbcmdsk.apps.googleusercontent.com",
-    "scopes": [
-      "openid",
-      "email",
-      "profile"
-    ]
-  },
   "action": {
     "default_popup": "popup/popup.html",
     "default_icon": {
@@ -35,16 +22,5 @@
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
-  },
-  "background": {
-    "service_worker": "background/background.js",
-    "type": "module"
-  },
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["content/content.js"],
-      "css": ["styles/content.css"]
-    }
-  ]
+  }
 }
