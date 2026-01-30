@@ -13,7 +13,7 @@
     "http://localhost:3000/*"
   ],
   "oauth2": {
-    "client_id": "815124406983-toomine59367q63v76ig145lrcksaklv.apps.googleusercontent.com",
+    "client_id": "815124406983-ou9e9eeh78hataj4p4uq02jqetbcmdsk.apps.googleusercontent.com",
     "scopes": [
       "openid",
       "email",
