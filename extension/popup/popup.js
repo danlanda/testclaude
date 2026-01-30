@@ -144,16 +144,24 @@ async function loadPlaces() {
     location: locationFilter.value
   };
 
-  const response = await chrome.runtime.sendMessage({
-    action: 'getPlaces',
-    filters
-  });
+  try {
+    const response = await chrome.runtime.sendMessage({
+      action: 'getPlaces',
+      filters
+    });
 
-  if (response.places) {
-    places = response.places;
-    filteredPlaces = places;
-    renderPlaces();
+    if (response && Array.isArray(response.places)) {
+      places = response.places;
+    } else {
+      places = [];
+    }
+  } catch (error) {
+    console.error('Error loading places:', error);
+    places = [];
   }
+
+  filteredPlaces = places;
+  renderPlaces();
 }
 
 // Filter places
