@@ -2,19 +2,17 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { authRouter } from './routes/auth.js';
-import { placesRouter } from './routes/places.js';
-import { tripsRouter } from './routes/trips.js';
+import { summariesRouter } from './routes/summaries.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*',
+  origin: '*',
   credentials: true
 }));
 app.use(express.json());
@@ -26,15 +24,17 @@ app.get('/health', (req, res) => {
 
 // Routes
 app.use('/api/auth', authRouter);
-app.use('/api/places', placesRouter);
-app.use('/api/trips', tripsRouter);
+app.use('/api/summaries', summariesRouter);
 
 // Error handler
 app.use(errorHandler);
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Travel Planner API running on http://localhost:${PORT}`);
-});
+// Start server (only in development)
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Page Summary API running on http://localhost:${PORT}`);
+  });
+}
 
 export default app;
