@@ -4,6 +4,20 @@ import prisma from '../config/database.js';
 import { authenticate, AuthRequest } from '../middleware/auth.js';
 import { createError } from '../middleware/errorHandler.js';
 
+interface SummaryRecord {
+  id: string;
+  title: string;
+  url: string;
+  summary: string;
+  keyPoints: string[];
+  wordCount: number;
+  linkCount: number;
+  imageCount: number;
+  headingCount: number;
+  createdAt: Date;
+  userId: string;
+}
+
 export const summariesRouter = Router();
 
 // Apply authentication to all routes
@@ -32,7 +46,7 @@ summariesRouter.get('/', async (req: AuthRequest, res: Response, next: NextFunct
       take: 100
     });
 
-    res.json(summaries.map(s => ({
+    res.json(summaries.map((s: SummaryRecord) => ({
       id: s.id,
       title: s.title,
       url: s.url,
