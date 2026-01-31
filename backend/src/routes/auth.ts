@@ -1,5 +1,4 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { OAuth2Client } from 'google-auth-library';
 import { z } from 'zod';
 import prisma from '../config/database.js';
 import { authenticate, generateToken, AuthRequest } from '../middleware/auth.js';
@@ -7,23 +6,26 @@ import { createError } from '../middleware/errorHandler.js';
 
 export const authRouter = Router();
 
-const googleClient = new OAuth2Client();
-
 // Validation schemas
 const googleAuthSchema = z.object({
   googleToken: z.string()
 });
+
+interface GoogleUserInfo {
+  sub: string;
+  email: string;
+  name?: string;
+  picture?: string;
+}
 
 // POST /api/auth/google - Authenticate with Google
 authRouter.post('/google', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { googleToken } = googleAuthSchema.parse(req.body);
 
-    // Verify the Google token
-    let payload;
+    // Verify the Google token by fetching user info
+    let userInfo: GoogleUserInfo;
     try {
-      // For Chrome extension, the token is an access token, not an ID token
-      // We need to fetch user info from Google's userinfo endpoint
       const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
         headers: {
           Authorization: `Bearer ${googleToken}`
@@ -34,36 +36,35 @@ authRouter.post('/google', async (req: Request, res: Response, next: NextFunctio
         throw new Error('Failed to verify Google token');
       }
 
-      payload = await response.json();
+      userInfo = await response.json() as GoogleUserInfo;
     } catch (error) {
       return next(createError('Invalid Google token', 401, 'INVALID_GOOGLE_TOKEN'));
     }
 
-    if (!payload.email || !payload.sub) {
+    if (!userInfo.email || !userInfo.sub) {
       return next(createError('Invalid Google token payload', 401, 'INVALID_PAYLOAD'));
     }
 
     // Find or create user
     let user = await prisma.user.findUnique({
-      where: { googleId: payload.sub }
+      where: { googleId: userInfo.sub }
     });
 
     if (!user) {
       user = await prisma.user.create({
         data: {
-          email: payload.email,
-          name: payload.name,
-          picture: payload.picture,
-          googleId: payload.sub
+          email: userInfo.email,
+          name: userInfo.name || null,
+          picture: userInfo.picture || null,
+          googleId: userInfo.sub
         }
       });
     } else {
-      // Update user info if changed
       user = await prisma.user.update({
         where: { id: user.id },
         data: {
-          name: payload.name,
-          picture: payload.picture
+          name: userInfo.name || user.name,
+          picture: userInfo.picture || user.picture
         }
       });
     }
@@ -125,13 +126,7 @@ authRouter.get('/me', authenticate, async (req: AuthRequest, res: Response, next
         email: true,
         name: true,
         picture: true,
-        createdAt: true,
-        _count: {
-          select: {
-            places: true,
-            trips: true
-          }
-        }
+        createdAt: true
       }
     });
 
