@@ -1,6 +1,6 @@
 // Background service worker for Page Summary extension
 
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = 'https://testclaude-backend-gao49jhqa-danlanda-8921s-projects.vercel.app/api';
 
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
