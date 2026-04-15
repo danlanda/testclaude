@@ -1,4 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#667eea" stroke="#667eea" stroke-width="2">
-  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-  <circle cx="12" cy="10" r="3" fill="white"></circle>
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+  <circle cx="8" cy="8" r="7.5" fill="#2c2c2c"/>
+  <g fill="white">
+    <polygon points="8,3 12,10.5 4,10.5"/>
+    <polygon points="5.5,5.5 3,10.5 8,10.5"/>
+    <polygon points="10.5,5 13,10.5 7,10.5"/>
+  </g>
+  <polygon points="8,3 9.2,4.8 6.8,4.8" fill="#2c2c2c"/>
 </svg>

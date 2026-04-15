@@ -4,13 +4,24 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Page Summary</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
   <div class="container">
     <!-- Header -->
     <header class="header">
-      <h1>📄 Page Summary</h1>
+      <h1>
+        <svg class="header-logo" viewBox="0 0 200 200" width="28" height="28">
+          <circle cx="100" cy="100" r="96" fill="#2c2c2c"/>
+          <circle cx="100" cy="100" r="87" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="1.5"/>
+          <g fill="rgba(255,255,255,0.9)"><polygon points="100,38 136,98 64,98"/><polygon points="68,56 40,98 96,98"/><polygon points="132,53 160,98 104,98"/></g>
+          <g fill="#2c2c2c"><polygon points="100,38 108,50 92,50"/><polygon points="132,53 138,62 126,62"/></g>
+        </svg>
+        Page Summary
+      </h1>
       <div id="authSection" class="auth-section">
         <button id="signInBtn" class="btn-auth">Sign In</button>
         <div id="userInfo" class="user-info hidden">

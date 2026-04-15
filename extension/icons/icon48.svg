@@ -1,4 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="#667eea" stroke="#667eea" stroke-width="2">
-  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-  <circle cx="12" cy="10" r="3" fill="white"></circle>
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <!-- Outer circle -->
+  <circle cx="24" cy="24" r="23" fill="#2c2c2c"/>
+  <!-- Inner ring -->
+  <circle cx="24" cy="24" r="20" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="0.8"/>
+
+  <!-- Mountains -->
+  <g fill="rgba(255,255,255,0.9)">
+    <polygon points="24,9 34,26 14,26"/>
+    <polygon points="17,14 9,26 25,26"/>
+    <polygon points="31,13 39,26 19,26"/>
+  </g>
+
+  <!-- Snow cap -->
+  <g fill="#2c2c2c">
+    <polygon points="24,9 26.5,13 21.5,13"/>
+  </g>
 </svg>
